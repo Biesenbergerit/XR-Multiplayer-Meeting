@@ -49,7 +49,7 @@ namespace XRMultiplayer.EditorTools
 
             foreach (var scenePath in ScenePaths)
             {
-                if (!File.Exists(scenePath))
+                if (AssetDatabase.LoadAssetAtPath<SceneAsset>(scenePath) == null)
                     continue;
 
                 EditorSceneManager.OpenScene(scenePath, OpenSceneMode.Single);
@@ -139,7 +139,7 @@ namespace XRMultiplayer.EditorTools
 
             var networkManagers = new[]
             {
-                AssetDatabase.LoadAssetAtPath<NetworkManager>(NetworkManagerPrefabPath)
+                AssetDatabase.LoadAssetAtPath<GameObject>(NetworkManagerPrefabPath)?.GetComponent<NetworkManager>()
             }.Where(manager => manager != null);
 
             foreach (var manager in networkManagers)
@@ -154,7 +154,7 @@ namespace XRMultiplayer.EditorTools
 
         static void EnsurePlayerPrefabPlacer()
         {
-            if (!File.Exists(PlayerPrefabPath))
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(PlayerPrefabPath) == null)
                 return;
 
             var root = PrefabUtility.LoadPrefabContents(PlayerPrefabPath);
