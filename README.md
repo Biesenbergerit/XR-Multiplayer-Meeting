@@ -13,3 +13,11 @@ Planned scope:
 - Synchronize markers through Netcode for GameObjects.
 - Display per-user colors and optional short labels.
 - Use the feature as a focused prototype for collaborative XR communication.
+
+## Meeting Marker Setup
+
+Open the project in Unity and run:
+
+`XR Multiplayer Meeting > Install Meeting Markers`
+
+The setup creates the networked marker prefab, registers it with the template NetworkManager, adds a scene manager, and attaches marker placement to the right-hand XR ray interactor.
