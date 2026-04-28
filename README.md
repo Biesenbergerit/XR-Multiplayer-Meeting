@@ -37,3 +37,13 @@ Controls:
 - Use `+` and `-` on the window to resize it.
 - Use `R` to place it back in front of the player.
 - Use `X` to close it.
+
+## Quest Passthrough Setup
+
+The project includes Unity OpenXR: Meta for Quest passthrough support. If the XR settings ever need to be restored, run:
+
+`XR Multiplayer Meeting > Configure Quest Passthrough`
+
+This selects the Meta Quest OpenXR feature set, enables Meta Quest Session and Camera (Passthrough), keeps the multiplayer internet permission, and sets the Android minimum SDK to 32 for Quest passthrough.
+
+To install on a Quest, enable Developer Mode on the headset, connect it over USB, approve USB debugging in the headset, then use Unity's Android `Build And Run`. The app appears on the Quest under Unknown Sources.

@@ -135,6 +135,10 @@ namespace XRMultiplayer
                 color.a = 0f;
                 m_MainCamera.backgroundColor = color;
             }
+            else
+            {
+                RestoreCameraSettings();
+            }
         }
 
         void EnsureARSession()
