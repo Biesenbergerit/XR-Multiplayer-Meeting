@@ -5502,10 +5502,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 11881f21a3cf84b64b9495461c8974ee, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VRMP::XRMultiplayer.RealityWindowManager
-  m_WindowPrefab: {fileID: 0}
+  m_WindowPrefab: {fileID: 4174984090019570433, guid: 5e9e369eab0e8462aac69dc16cda8ffb, type: 3}
   m_SpawnDistance: 1.2
   m_SpawnViewportPosition: {x: 0.5, y: 0.52, z: 0}
-  m_ShowOnStart: 0
+  m_ShowOnStart: 1
 --- !u!4 &2097573285
 Transform:
   m_ObjectHideFlags: 0

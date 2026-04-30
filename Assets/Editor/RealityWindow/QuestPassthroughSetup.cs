@@ -55,7 +55,11 @@ namespace XRMultiplayer.EditorTools
 
         static void ConfigureAndroidPlayerSettings()
         {
+            PlayerSettings.companyName = "BiesenbergerIT";
+            PlayerSettings.productName = "XR Multiplayer Meeting";
+            PlayerSettings.SetApplicationIdentifier(BuildTargetGroup.Android, "com.biesenbergerit.xrmultiplayermeeting");
             PlayerSettings.Android.minSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
+            PlayerSettings.Android.targetSdkVersion = AndroidSdkVersions.AndroidApiLevel32;
             PlayerSettings.Android.targetArchitectures = AndroidArchitecture.ARM64;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Android, ScriptingImplementation.IL2CPP);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.Android, new[] { GraphicsDeviceType.Vulkan });

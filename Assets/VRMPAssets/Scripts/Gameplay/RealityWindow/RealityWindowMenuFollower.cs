@@ -7,7 +7,7 @@ namespace XRMultiplayer
     /// </summary>
     public class RealityWindowMenuFollower : MonoBehaviour
     {
-        [SerializeField] Vector3 m_ViewportPosition = new(0.78f, 0.33f, 1.15f);
+        [SerializeField] Vector3 m_ViewportPosition = new(0.58f, 0.36f, 1.05f);
         [SerializeField] float m_PositionSharpness = 8f;
         [SerializeField] float m_RotationSharpness = 10f;
 
@@ -22,7 +22,11 @@ namespace XRMultiplayer
                 return;
 
             var targetPosition = m_MainCamera.ViewportToWorldPoint(m_ViewportPosition);
-            var targetRotation = Quaternion.LookRotation(transform.position - m_MainCamera.transform.position, Vector3.up);
+            var lookDirection = targetPosition - m_MainCamera.transform.position;
+            if (lookDirection.sqrMagnitude < 0.0001f)
+                return;
+
+            var targetRotation = Quaternion.LookRotation(lookDirection.normalized, Vector3.up);
 
             transform.position = Vector3.Lerp(transform.position, targetPosition, Time.deltaTime * m_PositionSharpness);
             transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, Time.deltaTime * m_RotationSharpness);

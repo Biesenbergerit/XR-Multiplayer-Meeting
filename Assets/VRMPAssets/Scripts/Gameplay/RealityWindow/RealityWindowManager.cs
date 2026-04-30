@@ -19,6 +19,7 @@ namespace XRMultiplayer
         Camera m_MainCamera;
         Behaviour m_ARSession;
         Behaviour m_ARCameraManager;
+        Behaviour m_ARCameraBackground;
         CameraClearFlags m_OriginalClearFlags;
         Color m_OriginalBackgroundColor;
         bool m_CameraSettingsCaptured;
@@ -65,12 +66,18 @@ namespace XRMultiplayer
         public void ShowWindow()
         {
             FindMainCamera();
+            if (m_MainCamera == null)
+            {
+                Debug.LogWarning("Reality Window could not find a scene camera.", this);
+                return;
+            }
+
             EnsureWindow();
-            ConfigurePassthrough(true);
 
             if (m_WindowInstance == null)
                 return;
 
+            ConfigurePassthrough(true);
             m_WindowInstance.gameObject.SetActive(true);
             m_WindowInstance.PlaceInFrontOfCamera(m_MainCamera, m_SpawnDistance, m_SpawnViewportPosition);
         }
@@ -94,8 +101,14 @@ namespace XRMultiplayer
 
         void EnsureWindow()
         {
-            if (m_WindowInstance != null || m_WindowPrefab == null)
+            if (m_WindowInstance != null)
                 return;
+
+            if (m_WindowPrefab == null)
+            {
+                Debug.LogWarning("Reality Window prefab is missing on the RealityWindowManager.", this);
+                return;
+            }
 
             m_WindowInstance = Instantiate(m_WindowPrefab);
             m_WindowInstance.SetManager(this);
@@ -124,15 +137,19 @@ namespace XRMultiplayer
             if (m_ARCameraManager == null)
                 m_ARCameraManager = GetOptionalComponent(m_MainCamera.gameObject, "UnityEngine.XR.ARFoundation.ARCameraManager");
 
+            if (m_ARCameraBackground == null)
+                m_ARCameraBackground = GetOptionalComponent(m_MainCamera.gameObject, "UnityEngine.XR.ARFoundation.ARCameraBackground");
+
             EnsureARSession();
             SetOptionalBehaviourEnabled(m_ARSession, enabled);
             SetOptionalBehaviourEnabled(m_ARCameraManager, enabled);
+            SetOptionalBehaviourEnabled(m_ARCameraBackground, enabled);
 
             if (enabled)
             {
-                m_MainCamera.clearFlags = CameraClearFlags.SolidColor;
-                var color = m_MainCamera.backgroundColor;
-                color.a = 0f;
+                m_MainCamera.clearFlags = m_OriginalClearFlags;
+                var color = m_OriginalBackgroundColor;
+                color.a = 1f;
                 m_MainCamera.backgroundColor = color;
             }
             else
