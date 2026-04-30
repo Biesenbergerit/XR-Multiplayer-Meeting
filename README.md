@@ -1,50 +1,59 @@
-XR Multiplayer Meeting
-Unity VR Multiplayer prototype for a collaborative XR meeting experience.
+# XR Multiplayer Meeting
 
-Project Idea
-The project implements a collaborative XR feature: networked 3D meeting markers that users can place in the scene with an XR controller ray.
+XR Multiplayer Meeting is a Unity-based Quest 3 prototype for collaborative meetings in mixed reality.
 
-Planned scope:
+The app focuses on a shared virtual meeting room with a local Reality Window that lets users briefly look back into their physical environment through Quest passthrough. The project is built for Android/OpenXR on Meta Quest hardware.
 
-Place spatial markers in VR through XR Interaction Toolkit input.
+## Core Features
 
-Synchronize markers through Netcode for GameObjects.
+- Collaborative XR meeting room
+- Local Reality Window with Quest passthrough
+- Movable and resizable in-world Reality Window
+- Local room hosting for headset testing
+- Quest 3 Android/OpenXR configuration
 
-Display per-user colors and optional short labels.
+## Unity Setup
 
-Use the feature as a focused prototype for collaborative XR communication.
+Unity version: 6000.4.0f1
 
-Meeting Marker Setup
-Open the project in Unity and run:
+Open the main scene:
 
-XR Multiplayer Meeting > Install Meeting Markers
+`Assets/Scenes/SampleScene.unity`
 
-The setup creates the networked marker prefab, registers it with the NetworkManager, adds a scene manager, and attaches marker placement to the right-hand XR ray interactor.
+The Reality Window prefab is located at:
 
-Reality Window Setup
-Open the project in Unity and run:
+`Assets/VRMPAssets/Prefabs/RealityWindow/Reality Window.prefab`
 
-XR Multiplayer Meeting > Install Reality Window
+The main scripts are located at:
 
-The setup adds a small local XR menu and a movable personal Reality Window to the multiplayer scenes. Selecting the menu button opens a grabbable window in front of the player. The window uses passthrough/transparent camera composition so the real world remains visible through that panel on supported XR hardware.
+`Assets/VRMPAssets/Scripts/Gameplay/RealityWindow`
+
+## Reality Window
+
+The Reality Window is spawned by the `RealityWindowManager` in the scene. It appears in front of the player and uses passthrough composition so the real world is visible only inside the window area.
 
 Controls:
 
-Select the small Reality Window menu button to open or hide the window.
+- Use `+` and `-` to resize the window.
+- Use `R` to reset it in front of the player.
+- Use `X` to close it.
 
-Grab the window frame to move it around.
+## Quest Setup
 
-Use + and - on the window to resize it.
+The project is configured for Quest 3 through Android/OpenXR settings. If settings need to be restored, run:
 
-Use R to place it back in front of the player.
+`XR Multiplayer Meeting > Configure Quest Passthrough`
 
-Use X to close it.
+This configures the Android package settings, OpenXR/Meta Quest support, and Quest passthrough requirements.
 
-Quest Passthrough Setup
-The project includes Unity OpenXR: Meta support for Quest passthrough. If the XR settings ever need to be restored, run:
+## Build And Install
 
-XR Multiplayer Meeting > Configure Quest Passthrough
+Target platform: Android
 
-This selects the Meta Quest OpenXR feature set, enables Meta Quest Session and Camera (Passthrough), configures the required internet permissions, and sets the Android minimum SDK to 32 for Quest passthrough.
+To install on a Quest headset:
 
-To install on a Quest, enable Developer Mode on the headset, connect it over USB, and use Unity's Android Build And Run. The app will appear on the Quest under Unknown Sources.
+1. Enable Developer Mode on the headset.
+2. Connect the headset to the PC.
+3. Build and run from Unity for Android.
+
+The installed app appears on the Quest under Unknown Sources.
