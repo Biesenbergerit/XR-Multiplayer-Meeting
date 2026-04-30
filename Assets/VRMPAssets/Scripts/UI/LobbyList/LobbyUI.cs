@@ -6,6 +6,7 @@ using Unity.Services.Vivox;
 using Unity.Services.Multiplayer;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
+using System;
 
 namespace XRMultiplayer
 {
@@ -16,6 +17,7 @@ namespace XRMultiplayer
         ///  This is used to prevent the client from waiting indefinitely if the server is not responding.
         /// </summary>
         const float k_DirectJoinTimeout = 4.5f;
+        const float k_LocalShutdownTimeout = 2.0f;
 
         enum ConnectionSubPanel
         {
@@ -76,6 +78,8 @@ namespace XRMultiplayer
 
         Coroutine m_UpdateLobbiesRoutine;
         Coroutine m_CooldownFillRoutine;
+        Coroutine m_LocalConnectionRoutine;
+        Coroutine m_DirectJoinTimeoutRoutine;
 
         bool m_Private = false;
         int m_PlayerCount;
@@ -302,7 +306,16 @@ namespace XRMultiplayer
             if (XRINetworkGameManager.CurrentSessionType == SessionType.LocalOnly)
                 return;
 
-            QuerySessionsResults results = await MultiplayerService.Instance.QuerySessionsAsync(SessionManager.GetQuickJoinFilterOptions());
+            QuerySessionsResults results;
+            try
+            {
+                results = await MultiplayerService.Instance.QuerySessionsAsync(SessionManager.GetQuickJoinFilterOptions());
+            }
+            catch (Exception e)
+            {
+                Utils.LogWarning($"Failed to refresh lobbies: {e.Message}");
+                return;
+            }
 
             foreach (Transform t in m_LobbyListParent)
             {
@@ -334,29 +347,126 @@ namespace XRMultiplayer
 
         public void HostLocalRoom()
         {
+            StartLocalConnectionRoutine(HostLocalRoomRoutine());
+        }
+
+        IEnumerator HostLocalRoomRoutine()
+        {
+            ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionPanel);
+            ConnectedUpdated("Starting local room.");
+
+            yield return PrepareLocalConnectionStart();
+
             if (XRINetworkGameManager.Instance.HostLocalConnection())
             {
-                ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionSuccessPanel);
+                LocalConnectionSucceeded("Local room is ready.");
             }
             else
             {
                 Utils.LogError($"Failed to host local room:");
-                m_ConnectionFailedText.text = $"<b>Error:</b> Room already exists or could not be created";
+                m_ConnectionFailedText.text = $"<b>Error:</b> Local room could not be created. Please try again.";
                 ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionFailurePanel);
             }
         }
 
         public void JoinLocalRoom()
         {
+            StartLocalConnectionRoutine(JoinLocalRoomRoutine());
+        }
+
+        IEnumerator JoinLocalRoomRoutine()
+        {
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsHost)
+            {
+                LocalConnectionSucceeded("Local room is ready.");
+                yield break;
+            }
+
+            if (ShouldHostLocalRoom())
+            {
+                yield return HostLocalRoomRoutine();
+                yield break;
+            }
+
+            ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionPanel);
+            ConnectedUpdated("Joining local room.");
+
+            if (NetworkManager.Singleton != null && NetworkManager.Singleton.IsListening && !NetworkManager.Singleton.IsConnectedClient)
+                yield return PrepareLocalConnectionStart();
+
             if (XRINetworkGameManager.Instance.JoinLocalConnection())
             {
-                StartCoroutine(CheckForFailedConnection());
-                ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionPanel);
+                m_DirectJoinTimeoutRoutine = StartCoroutine(CheckForFailedConnection());
             }
             else
             {
                 FailedToJoinLocal();
             }
+        }
+
+        void StartLocalConnectionRoutine(IEnumerator routine)
+        {
+            if (m_DirectJoinTimeoutRoutine != null)
+            {
+                StopCoroutine(m_DirectJoinTimeoutRoutine);
+                m_DirectJoinTimeoutRoutine = null;
+            }
+
+            if (m_LocalConnectionRoutine != null)
+                StopCoroutine(m_LocalConnectionRoutine);
+
+            m_LocalConnectionRoutine = StartCoroutine(RunLocalConnectionRoutine(routine));
+        }
+
+        IEnumerator RunLocalConnectionRoutine(IEnumerator routine)
+        {
+            yield return routine;
+            m_LocalConnectionRoutine = null;
+        }
+
+        IEnumerator PrepareLocalConnectionStart()
+        {
+            if (NetworkManager.Singleton == null)
+                yield break;
+
+            if (NetworkManager.Singleton.IsHost)
+                yield break;
+
+            if (!NetworkManager.Singleton.IsListening)
+                yield break;
+
+            NetworkManager.Singleton.Shutdown();
+
+            float timeoutAt = Time.realtimeSinceStartup + k_LocalShutdownTimeout;
+            while (NetworkManager.Singleton != null &&
+                NetworkManager.Singleton.IsListening &&
+                Time.realtimeSinceStartup < timeoutAt)
+            {
+                yield return null;
+            }
+
+            yield return null;
+        }
+
+        void LocalConnectionSucceeded(string message)
+        {
+            m_ConnectionSuccessText.text = message;
+            ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionSuccessPanel);
+        }
+
+        bool ShouldHostLocalRoom()
+        {
+            if (NetworkManager.Singleton == null)
+                return false;
+
+            if (NetworkManager.Singleton.IsHost)
+                return false;
+
+            if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is not UnityTransport transport)
+                return true;
+
+            var address = transport.ConnectionData.Address;
+            return XRINetworkGameManager.Instance.IsLocalDeviceAddress(address);
         }
 
         void FailedToJoinLocal()
@@ -369,14 +479,17 @@ namespace XRMultiplayer
         IEnumerator CheckForFailedConnection()
         {
             yield return new WaitForSeconds(k_DirectJoinTimeout);
-            if (!NetworkManager.Singleton.IsConnectedClient)
+            m_DirectJoinTimeoutRoutine = null;
+
+            if (NetworkManager.Singleton == null || !NetworkManager.Singleton.IsConnectedClient)
             {
-                NetworkManager.Singleton.Shutdown();
+                if (NetworkManager.Singleton != null)
+                    NetworkManager.Singleton.Shutdown();
                 FailedToJoinLocal();
             }
             else
             {
-                ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionSuccessPanel);
+                LocalConnectionSucceeded("Joined local room.");
             }
         }
 

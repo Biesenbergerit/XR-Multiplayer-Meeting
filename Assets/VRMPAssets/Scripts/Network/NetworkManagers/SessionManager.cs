@@ -167,6 +167,9 @@ namespace XRMultiplayer
             catch (Exception e)
             {
                 Debug.LogException(e);
+                StopAllCoroutines();
+                m_Status.Value = "Lobby connection failed.";
+                OnSessionFailed?.Invoke("Failed to query or create a lobby. Please check Unity Services and your network connection.");
             }
 
             return m_CurrentSession;
@@ -209,6 +212,7 @@ namespace XRMultiplayer
             catch (Exception e)
             {
                 string failureMessage = "Failed to Join Lobby.";
+                StopAllCoroutines();
                 Utils.Log($"{k_DebugPrepend}{e.Message}", 1);
 
                 if (e is LobbyServiceException)
@@ -256,6 +260,7 @@ namespace XRMultiplayer
                 catch (Exception e)
                 {
                     string failureMessage = $"Failed to connect to {sessionName}. Please try again.";
+                    StopAllCoroutines();
                     Utils.Log($"{k_DebugPrepend}{failureMessage}\n\n{e}", 1);
                     // Debug.LogWarning($"[XRMPT] {failureMessage}\n\n{e}");
                     OnSessionFailed?.Invoke(failureMessage);
@@ -267,6 +272,7 @@ namespace XRMultiplayer
             catch (Exception e)
             {
                 string failureMessage = "Failed to Create Lobby. Please try again.";
+                StopAllCoroutines();
                 Utils.Log($"{k_DebugPrepend}{failureMessage}\n\n{e}", 1);
                 // Debug.LogWarning($"[XRMPT] {failureMessage}\n\n{e}");
                 OnSessionFailed?.Invoke(failureMessage);
@@ -315,11 +321,11 @@ namespace XRMultiplayer
         /// </summary>
         void ConnectedToSession()
         {
+            if (m_CurrentSession == null)
+                return;
+
             XRINetworkGameManager.ConnectedRoomCode = m_CurrentSession.Code;
-            if (m_CurrentSession != null)
-            {
-                m_CurrentSession.SessionPropertiesChanged += OnSessionPropertiesChanged;
-            }
+            m_CurrentSession.SessionPropertiesChanged += OnSessionPropertiesChanged;
         }
 
         private void OnSessionPropertiesChanged()

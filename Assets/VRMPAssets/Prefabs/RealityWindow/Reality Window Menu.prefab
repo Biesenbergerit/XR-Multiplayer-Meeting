@@ -276,7 +276,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 857e299ff0d31457a81cee0f8a1215a7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: VRMP::XRMultiplayer.RealityWindowMenuFollower
-  m_ViewportPosition: {x: 0.78, y: 0.33, z: 1.15}
+  m_ViewportPosition: {x: 0.58, y: 0.36, z: 1.05}
   m_PositionSharpness: 8
   m_RotationSharpness: 10
 --- !u!1 &7177370025694381162

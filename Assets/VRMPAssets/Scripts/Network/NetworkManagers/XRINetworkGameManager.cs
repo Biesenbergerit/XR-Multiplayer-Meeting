@@ -9,6 +9,7 @@ using Unity.Services.Multiplayer;
 using Unity.Netcode.Transports.UTP;
 using System.Net.Sockets;
 using System.Net;
+using System.Net.NetworkInformation;
 
 #if UNITY_EDITOR && HAS_MPPM
 
@@ -612,14 +613,34 @@ namespace XRMultiplayer
         /// </summary>
         public virtual bool HostLocalConnection()
         {
+            if (NetworkManager.Singleton == null)
+                return false;
+
             string localIP = GetLocalIPAddress();
 
             var transport = NetworkManager.Singleton.NetworkConfig.NetworkTransport as UnityTransport;
+            if (transport == null)
+                return false;
+
+            if (NetworkManager.Singleton.IsHost)
+            {
+                SetLocalRoomInfo(transport.ConnectionData.Address);
+                return true;
+            }
+
+            if (NetworkManager.Singleton.IsListening)
+                return false;
 
             transport.ConnectionData.Address = localIP;
-            ConnectedRoomName.Value = "Local Room";
-            ConnectedRoomCode = localIP;
-            return NetworkManager.Singleton.StartHost();
+            transport.ConnectionData.ServerListenAddress = "0.0.0.0";
+
+            if (!NetworkManager.Singleton.StartHost())
+                return false;
+
+            SetLocalRoomInfo(localIP);
+            m_Connected.Value = true;
+            m_ConnectionState.Value = ConnectionState.Connected;
+            return true;
         }
 
         /// <summary>
@@ -628,9 +649,27 @@ namespace XRMultiplayer
         /// </summary>
         public virtual bool JoinLocalConnection()
         {
+            if (NetworkManager.Singleton == null)
+                return false;
+
             var transport = NetworkManager.Singleton.NetworkConfig.NetworkTransport as UnityTransport;
-            ConnectedRoomName.Value = "Local Room";
-            ConnectedRoomCode = transport.ConnectionData.Address;
+            if (transport == null)
+                return false;
+
+            if (NetworkManager.Singleton.IsHost)
+            {
+                SetLocalRoomInfo(transport.ConnectionData.Address);
+                return true;
+            }
+
+            if (NetworkManager.Singleton.IsListening)
+                return false;
+
+            if (IsLocalDeviceAddress(transport.ConnectionData.Address))
+                return HostLocalConnection();
+
+            SetLocalRoomInfo(transport.ConnectionData.Address);
+            m_ConnectionState.Value = ConnectionState.Connecting;
             return NetworkManager.Singleton.StartClient();
         }
 
@@ -639,7 +678,11 @@ namespace XRMultiplayer
         /// </summary>
         public virtual void LeaveLocalConnection()
         {
-            NetworkManager.Singleton.Shutdown();
+            if (NetworkManager.Singleton != null)
+                NetworkManager.Singleton.Shutdown();
+
+            m_Connected.Value = false;
+            m_ConnectionState.Value = IsAuthenticated() ? ConnectionState.Authenticated : ConnectionState.None;
         }
 
 
@@ -668,6 +711,57 @@ namespace XRMultiplayer
                 Utils.Log($"{k_DebugPrepend}Failed to get local IP: {e.Message}", 1);
             }
             return localIP;
+        }
+
+        public virtual bool IsLocalDeviceAddress(string address)
+        {
+            if (IsLoopbackAddress(address))
+                return true;
+
+            try
+            {
+                if (!IPAddress.TryParse(address, out IPAddress targetAddress))
+                    return false;
+
+                string localIP = GetLocalIPAddress();
+                if (IPAddress.TryParse(localIP, out IPAddress primaryAddress) && primaryAddress.Equals(targetAddress))
+                    return true;
+
+                foreach (NetworkInterface networkInterface in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (networkInterface.OperationalStatus != OperationalStatus.Up)
+                        continue;
+
+                    foreach (UnicastIPAddressInformation addressInfo in networkInterface.GetIPProperties().UnicastAddresses)
+                    {
+                        if (addressInfo.Address.AddressFamily == AddressFamily.InterNetwork &&
+                            addressInfo.Address.Equals(targetAddress))
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Utils.Log($"{k_DebugPrepend}Failed to check local IP address: {e.Message}", 1);
+            }
+
+            return false;
+        }
+
+        void SetLocalRoomInfo(string address)
+        {
+            ConnectedRoomName.Value = "Local Room";
+            ConnectedRoomCode = string.IsNullOrWhiteSpace(address) ? GetLocalIPAddress() : address;
+        }
+
+        static bool IsLoopbackAddress(string address)
+        {
+            return string.IsNullOrWhiteSpace(address) ||
+                address == "127.0.0.1" ||
+                address == "0.0.0.0" ||
+                address.Equals("localhost", StringComparison.OrdinalIgnoreCase);
         }
     }
 }
