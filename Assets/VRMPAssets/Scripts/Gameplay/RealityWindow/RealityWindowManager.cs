@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace XRMultiplayer
@@ -13,9 +14,12 @@ namespace XRMultiplayer
         [SerializeField] RealityWindow m_WindowPrefab;
         [SerializeField] float m_SpawnDistance = 1.2f;
         [SerializeField] Vector3 m_SpawnViewportPosition = new(0.5f, 0.52f, 0f);
-        [SerializeField] bool m_ShowOnStart;
+        [SerializeField] bool m_ShowOnStart = false;
+        [SerializeField] bool m_HideRegularMenusWhileVisible = true;
 
         RealityWindow m_WindowInstance;
+        RealityWindowMenuFollower m_MenuFollower;
+        readonly List<CanvasState> m_HiddenCanvasStates = new();
         Camera m_MainCamera;
         Behaviour m_ARSession;
         Behaviour m_ARCameraManager;
@@ -40,11 +44,16 @@ namespace XRMultiplayer
         void Start()
         {
             FindMainCamera();
+            FindMenuFollower();
 
             if (m_ShowOnStart)
                 ShowWindow();
             else
+            {
                 ConfigurePassthrough(false);
+                SetLauncherVisible(true);
+                RestoreRegularMenus();
+            }
         }
 
         void OnDestroy()
@@ -53,6 +62,7 @@ namespace XRMultiplayer
                 Instance = null;
 
             RestoreCameraSettings();
+            RestoreRegularMenus();
         }
 
         public void ToggleWindow()
@@ -78,6 +88,8 @@ namespace XRMultiplayer
                 return;
 
             ConfigurePassthrough(true);
+            SetLauncherVisible(true);
+            HideRegularMenus();
             m_WindowInstance.gameObject.SetActive(true);
             m_WindowInstance.PlaceInFrontOfCamera(m_MainCamera, m_SpawnDistance, m_SpawnViewportPosition);
         }
@@ -88,6 +100,8 @@ namespace XRMultiplayer
                 m_WindowInstance.gameObject.SetActive(false);
 
             ConfigurePassthrough(false);
+            SetLauncherVisible(true);
+            RestoreRegularMenus();
         }
 
         public void ResetWindowPose()
@@ -120,6 +134,60 @@ namespace XRMultiplayer
                 return;
 
             m_MainCamera = Camera.main != null ? Camera.main : FindAnyObjectByType<Camera>();
+        }
+
+        void FindMenuFollower()
+        {
+            if (m_MenuFollower != null)
+                return;
+
+            m_MenuFollower = FindAnyObjectByType<RealityWindowMenuFollower>(FindObjectsInactive.Include);
+        }
+
+        void SetLauncherVisible(bool visible)
+        {
+            FindMenuFollower();
+
+            if (m_MenuFollower != null)
+                m_MenuFollower.gameObject.SetActive(visible);
+        }
+
+        void HideRegularMenus()
+        {
+            if (!m_HideRegularMenusWhileVisible)
+                return;
+
+            RestoreRegularMenus();
+
+            foreach (var canvas in FindObjectsByType<Canvas>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                if (canvas == null || IsRealityWindowObject(canvas.transform))
+                    continue;
+
+                m_HiddenCanvasStates.Add(new CanvasState(canvas, canvas.enabled));
+                canvas.enabled = false;
+            }
+        }
+
+        void RestoreRegularMenus()
+        {
+            for (var index = 0; index < m_HiddenCanvasStates.Count; index++)
+            {
+                var state = m_HiddenCanvasStates[index];
+                if (state.Canvas != null)
+                    state.Canvas.enabled = state.WasEnabled;
+            }
+
+            m_HiddenCanvasStates.Clear();
+        }
+
+        bool IsRealityWindowObject(Transform target)
+        {
+            if (target == null)
+                return false;
+
+            return target.GetComponentInParent<RealityWindow>(true) != null
+                || target.GetComponentInParent<RealityWindowMenuFollower>(true) != null;
         }
 
         void ConfigurePassthrough(bool enabled)
@@ -236,6 +304,18 @@ namespace XRMultiplayer
 
             m_MainCamera.clearFlags = m_OriginalClearFlags;
             m_MainCamera.backgroundColor = m_OriginalBackgroundColor;
+        }
+
+        readonly struct CanvasState
+        {
+            public CanvasState(Canvas canvas, bool wasEnabled)
+            {
+                Canvas = canvas;
+                WasEnabled = wasEnabled;
+            }
+
+            public Canvas Canvas { get; }
+            public bool WasEnabled { get; }
         }
     }
 }

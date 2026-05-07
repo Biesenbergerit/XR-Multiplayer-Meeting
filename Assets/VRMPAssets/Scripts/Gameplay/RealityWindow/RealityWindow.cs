@@ -71,6 +71,12 @@ namespace XRMultiplayer
 
         void ApplyVisualPolish()
         {
+            if (FindChild("Window Artwork Frame") != null)
+            {
+                ApplyArtworkWindowVisuals();
+                return;
+            }
+
             m_FrameMaterial = CreateMaterial(new Color(0.02f, 0.22f, 0.26f, 1f), new Color(0.0f, 0.28f, 0.32f, 1f));
             m_HeaderMaterial = CreateMaterial(new Color(0.025f, 0.032f, 0.04f, 1f), new Color(0.0f, 0.07f, 0.08f, 1f));
             m_ButtonMaterial = CreateMaterial(new Color(0.08f, 0.12f, 0.14f, 1f), new Color(0.0f, 0.12f, 0.15f, 1f));
@@ -111,6 +117,66 @@ namespace XRMultiplayer
             }
         }
 
+        void ApplyArtworkWindowVisuals()
+        {
+            if (TryGetComponent(out BoxCollider boxCollider))
+            {
+                boxCollider.size = new Vector3(1.55f, 1.16f, 0.08f);
+                boxCollider.center = Vector3.zero;
+            }
+
+            SetChildVisual("Window Artwork Frame", new Vector3(0f, 0f, -0.055f), new Vector3(1.55f, 1.16f, 1f), null);
+            SetChildVisual("Passthrough Cutout", new Vector3(0f, -0.015f, 0f), new Vector3(1.19f, 0.69f, 1f), null);
+
+            HideChildVisual("Header");
+            HideChildVisual("Frame Top");
+            HideChildVisual("Frame Bottom");
+            HideChildVisual("Frame Left");
+            HideChildVisual("Frame Right");
+            HideChildVisual("Accent Top");
+            HideChildVisual("Accent Bottom");
+            HideChildVisual("Accent Left");
+            HideChildVisual("Accent Right");
+
+            var title = FindChild("Title");
+            if (title != null)
+                title.gameObject.SetActive(false);
+
+            m_ButtonMaterial = CreateMaterial(new Color(0.012f, 0.022f, 0.032f, 0.92f), new Color(0f, 0.17f, 0.25f, 1f));
+            SetArtworkControl("Smaller Button", new Vector3(0.36f, 0.455f, -0.08f));
+            SetArtworkControl("Larger Button", new Vector3(0.46f, 0.455f, -0.08f));
+            SetArtworkControl("Reset Button", new Vector3(0.56f, 0.455f, -0.08f));
+            SetArtworkControl("Close Button", new Vector3(0.66f, 0.455f, -0.08f));
+        }
+
+        void SetArtworkControl(string childName, Vector3 localPosition)
+        {
+            var child = FindChild(childName);
+            if (child == null)
+                return;
+
+            child.localPosition = localPosition;
+            child.localScale = new Vector3(0.06f, 0.06f, 0.026f);
+
+            if (child.TryGetComponent(out Renderer renderer))
+            {
+                renderer.enabled = true;
+                renderer.sharedMaterial = m_ButtonMaterial;
+            }
+
+            foreach (var text in child.GetComponentsInChildren<TMP_Text>(true))
+            {
+                text.color = new Color(0.82f, 0.97f, 1f, 1f);
+                text.fontSize = 0.04f;
+                text.fontStyle = FontStyles.Bold;
+                text.raycastTarget = false;
+                text.alignment = TextAlignmentOptions.Center;
+                text.enableWordWrapping = false;
+                text.rectTransform.localPosition = new Vector3(0f, 0f, -0.03f);
+                text.rectTransform.sizeDelta = new Vector2(0.18f, 0.12f);
+            }
+        }
+
         void SetChildVisual(string childName, Vector3 localPosition, Vector3 localScale, Material material)
         {
             var child = FindChild(childName);
@@ -122,6 +188,13 @@ namespace XRMultiplayer
 
             if (material != null && child.TryGetComponent(out Renderer renderer))
                 renderer.sharedMaterial = material;
+        }
+
+        void HideChildVisual(string childName)
+        {
+            var child = FindChild(childName);
+            if (child != null && child.TryGetComponent(out Renderer renderer))
+                renderer.enabled = false;
         }
 
         void AddOrUpdateAccent(string childName, Vector3 localPosition, Vector3 localScale)

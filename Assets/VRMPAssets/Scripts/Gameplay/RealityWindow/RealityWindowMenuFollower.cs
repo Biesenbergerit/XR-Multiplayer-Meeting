@@ -8,6 +8,7 @@ namespace XRMultiplayer
     public class RealityWindowMenuFollower : MonoBehaviour
     {
         [SerializeField] Vector3 m_ViewportPosition = new(0.58f, 0.36f, 1.05f);
+        [SerializeField] Vector3 m_OpenWindowViewportPosition = new(0.5f, 0.18f, 1.05f);
         [SerializeField] float m_PositionSharpness = 8f;
         [SerializeField] float m_RotationSharpness = 10f;
 
@@ -21,7 +22,11 @@ namespace XRMultiplayer
             if (m_MainCamera == null)
                 return;
 
-            var targetPosition = m_MainCamera.ViewportToWorldPoint(m_ViewportPosition);
+            var viewportPosition = RealityWindowManager.Instance != null && RealityWindowManager.Instance.isWindowVisible
+                ? m_OpenWindowViewportPosition
+                : m_ViewportPosition;
+
+            var targetPosition = m_MainCamera.ViewportToWorldPoint(viewportPosition);
             var lookDirection = targetPosition - m_MainCamera.transform.position;
             if (lookDirection.sqrMagnitude < 0.0001f)
                 return;

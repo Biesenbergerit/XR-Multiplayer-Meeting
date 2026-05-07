@@ -3572,6 +3572,7 @@ MonoBehaviour:
   m_MinMaxMoveSpeed: {x: 2, y: 20}
   m_MinMaxTurnAmount: {x: 15, y: 180}
   m_SnapTurnUpdateAmount: 15
+  m_StartWithTunnelingVignetteOff: 1
 --- !u!114 &3365016763219727532
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -17639,7 +17640,7 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  m_IsOn: 1
+  m_IsOn: 0
 --- !u!82 &832780300722493678
 AudioSource:
   m_ObjectHideFlags: 0

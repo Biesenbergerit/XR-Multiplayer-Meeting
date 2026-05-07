@@ -48,6 +48,7 @@ namespace XRMultiplayer
         [SerializeField] Vector2 m_MinMaxMoveSpeed = new Vector2(2.0f, 10.0f);
         [SerializeField] Vector2 m_MinMaxTurnAmount = new Vector2(15.0f, 180.0f);
         [SerializeField] float m_SnapTurnUpdateAmount = 15.0f;
+        [SerializeField] bool m_StartWithTunnelingVignetteOff = true;
 
         VoiceChatManager m_VoiceChatManager;
         DynamicMoveProvider m_MoveProvider;
@@ -62,6 +63,8 @@ namespace XRMultiplayer
             m_MoveProvider = FindFirstObjectByType<DynamicMoveProvider>();
             m_TurnProvider = FindFirstObjectByType<SnapTurnProvider>();
             m_TunnelingVignetteController = FindFirstObjectByType<UnityEngine.XR.Interaction.Toolkit.Locomotion.Comfort.TunnelingVignetteController>();
+            if (m_StartWithTunnelingVignetteOff && m_TunnelingVignetteController != null)
+                m_TunnelingVignetteController.gameObject.SetActive(false);
 
             XRINetworkGameManager.Connected.Subscribe(ConnectOnline);
             XRINetworkGameManager.ConnectedRoomName.Subscribe(UpdateRoomName);
@@ -301,7 +304,8 @@ namespace XRMultiplayer
 
         public void ToggleTunnelingVignette(bool toggle)
         {
-            m_TunnelingVignetteController.gameObject.SetActive(toggle);
+            if (m_TunnelingVignetteController != null)
+                m_TunnelingVignetteController.gameObject.SetActive(toggle);
         }
 
         public void ToggleFlight(bool toggle)
