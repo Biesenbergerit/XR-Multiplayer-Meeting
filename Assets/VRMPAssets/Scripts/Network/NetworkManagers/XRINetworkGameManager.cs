@@ -614,32 +614,54 @@ namespace XRMultiplayer
         public virtual bool HostLocalConnection()
         {
             if (NetworkManager.Singleton == null)
+            {
+                ConnectionFailed("Network manager is missing.");
                 return false;
+            }
+
+            var transport = ConfigureLocalNetworkManager();
+            if (transport == null)
+            {
+                ConnectionFailed("Local network transport is missing.");
+                return false;
+            }
+
+            if (NetworkManager.Singleton.NetworkConfig.PlayerPrefab == null)
+            {
+                ConnectionFailed("Local player prefab is missing.");
+                return false;
+            }
 
             string localIP = GetLocalIPAddress();
-
-            var transport = NetworkManager.Singleton.NetworkConfig.NetworkTransport as UnityTransport;
-            if (transport == null)
-                return false;
+            Utils.Log($"{k_DebugPrepend}Starting local host on {localIP}:{transport.ConnectionData.Port}.");
+            ConnectionUpdated($"Starting local host on {localIP}");
 
             if (NetworkManager.Singleton.IsHost)
             {
                 SetLocalRoomInfo(transport.ConnectionData.Address);
+                ConnectionUpdated($"Local room already running: {ConnectedRoomCode}");
                 return true;
             }
 
             if (NetworkManager.Singleton.IsListening)
+            {
+                ConnectionFailed("Network is still shutting down. Please try again.");
                 return false;
+            }
 
-            transport.ConnectionData.Address = localIP;
-            transport.ConnectionData.ServerListenAddress = "0.0.0.0";
+            transport.SetConnectionData(localIP, transport.ConnectionData.Port, "0.0.0.0");
 
             if (!NetworkManager.Singleton.StartHost())
+            {
+                ConnectionFailed("Local room could not start.");
                 return false;
+            }
 
             SetLocalRoomInfo(localIP);
             m_Connected.Value = true;
             m_ConnectionState.Value = ConnectionState.Connected;
+            Utils.Log($"{k_DebugPrepend}Local host started: {ConnectedRoomCode}:{transport.ConnectionData.Port}.");
+            ConnectionUpdated($"Local room ready: {ConnectedRoomCode}");
             return true;
         }
 
@@ -650,11 +672,17 @@ namespace XRMultiplayer
         public virtual bool JoinLocalConnection()
         {
             if (NetworkManager.Singleton == null)
+            {
+                ConnectionFailed("Network manager is missing.");
                 return false;
+            }
 
-            var transport = NetworkManager.Singleton.NetworkConfig.NetworkTransport as UnityTransport;
+            var transport = ConfigureLocalNetworkManager();
             if (transport == null)
+            {
+                ConnectionFailed("Local network transport is missing.");
                 return false;
+            }
 
             if (NetworkManager.Singleton.IsHost)
             {
@@ -665,10 +693,15 @@ namespace XRMultiplayer
             if (NetworkManager.Singleton.IsListening)
                 return false;
 
-            if (IsLocalDeviceAddress(transport.ConnectionData.Address))
+            string targetAddress = string.IsNullOrWhiteSpace(transport.ConnectionData.Address)
+                ? GetLocalIPAddress()
+                : transport.ConnectionData.Address;
+
+            if (IsLocalDeviceAddress(targetAddress))
                 return HostLocalConnection();
 
-            SetLocalRoomInfo(transport.ConnectionData.Address);
+            transport.SetConnectionData(targetAddress, transport.ConnectionData.Port);
+            SetLocalRoomInfo(targetAddress);
             m_ConnectionState.Value = ConnectionState.Connecting;
             return NetworkManager.Singleton.StartClient();
         }
@@ -693,7 +726,31 @@ namespace XRMultiplayer
         /// <remarks>This may not work in all environments, especially if the device has multiple network interfaces.</remarks>
         public virtual string GetLocalIPAddress()
         {
-            string localIP = "127.0.0.1";
+            try
+            {
+                foreach (NetworkInterface networkInterface in NetworkInterface.GetAllNetworkInterfaces())
+                {
+                    if (networkInterface.OperationalStatus != OperationalStatus.Up ||
+                        networkInterface.NetworkInterfaceType == NetworkInterfaceType.Loopback)
+                    {
+                        continue;
+                    }
+
+                    foreach (UnicastIPAddressInformation addressInfo in networkInterface.GetIPProperties().UnicastAddresses)
+                    {
+                        if (addressInfo.Address.AddressFamily == AddressFamily.InterNetwork &&
+                            !IPAddress.IsLoopback(addressInfo.Address))
+                        {
+                            return addressInfo.Address.ToString();
+                        }
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Utils.Log($"{k_DebugPrepend}Failed to inspect local network interfaces: {e.Message}", 1);
+            }
+
             try
             {
                 string host = "8.8.8.8"; // Google's public DNS server, used to determine the local IP address.
@@ -703,14 +760,16 @@ namespace XRMultiplayer
                 {
                     socket.Connect(host, port);
                     IPEndPoint endPoint = socket.LocalEndPoint as IPEndPoint;
-                    localIP = endPoint.Address.ToString();
+                    if (endPoint != null && !IPAddress.IsLoopback(endPoint.Address))
+                        return endPoint.Address.ToString();
                 }
             }
             catch (Exception e)
             {
                 Utils.Log($"{k_DebugPrepend}Failed to get local IP: {e.Message}", 1);
             }
-            return localIP;
+
+            return "127.0.0.1";
         }
 
         public virtual bool IsLocalDeviceAddress(string address)
@@ -754,6 +813,33 @@ namespace XRMultiplayer
         {
             ConnectedRoomName.Value = "Local Room";
             ConnectedRoomCode = string.IsNullOrWhiteSpace(address) ? GetLocalIPAddress() : address;
+        }
+
+        UnityTransport ConfigureLocalNetworkManager()
+        {
+            if (NetworkManager.Singleton == null)
+                return null;
+
+            if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is not UnityTransport transport)
+            {
+                if (!NetworkManager.Singleton.TryGetComponent(out transport))
+                    transport = NetworkManager.Singleton.gameObject.AddComponent<UnityTransport>();
+
+                NetworkManager.Singleton.NetworkConfig.NetworkTransport = transport;
+            }
+
+            NetworkManager.Singleton.NetworkConfig.NetworkTopology = NetworkTopologyTypes.ClientServer;
+            NetworkManager.Singleton.NetworkConfig.UseCMBService = false;
+            NetworkManager.Singleton.NetworkConfig.AutoSpawnPlayerPrefabClientSide = false;
+
+            if (transport.ConnectionData.Port == 0)
+            {
+                string address = string.IsNullOrWhiteSpace(transport.ConnectionData.Address) ? "127.0.0.1" : transport.ConnectionData.Address;
+                string listenAddress = string.IsNullOrWhiteSpace(transport.ConnectionData.ServerListenAddress) ? "0.0.0.0" : transport.ConnectionData.ServerListenAddress;
+                transport.SetConnectionData(address, 7777, listenAddress);
+            }
+
+            return transport;
         }
 
         static bool IsLoopbackAddress(string address)

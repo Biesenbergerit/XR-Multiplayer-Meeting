@@ -48,11 +48,15 @@ MonoBehaviour:
   NetworkManagerExpanded: 0
   NetworkConfig:
     ProtocolVersion: 0
-    NetworkTransport: {fileID: 0}
-    PlayerPrefab: {fileID: 0}
+    NetworkTransport: {fileID: 543428609926267499}
+    PlayerPrefab: {fileID: 5358844088564582620, guid: 2b6dab709dc28bd4c98b9d7d53793dc6,
+      type: 3}
     Prefabs:
       NetworkPrefabsLists:
-      - {fileID: 11400000, guid: b05dab8eb1d0d416bbb1b5652a7b5036, type: 2}
+      - {fileID: 11400000, guid: 2995457f2d3cc4242a2895501478048c, type: 2}
+      - {fileID: 11400000, guid: 602d40a0e3e4bd540a7a1070430d0368, type: 2}
+      - {fileID: 11400000, guid: 7c6e842cd7704084fa88682fe4e71ae6, type: 2}
+      - {fileID: 11400000, guid: a4390c5271cb1294ba726e4409e1ec04, type: 2}
     TickRate: 30
     ClientConnectionBufferTimeout: 10
     ConnectionApproval: 0
@@ -70,7 +74,7 @@ MonoBehaviour:
     EnableNetworkLogs: 1
     NetworkTopology: 0
     UseCMBService: 0
-    AutoSpawnPlayerPrefabClientSide: 1
+    AutoSpawnPlayerPrefabClientSide: 0
     NetworkMessageMetrics: 1
     NetworkProfilingMetrics: 1
     OldPrefabList: []
@@ -104,9 +108,9 @@ MonoBehaviour:
     LoadSceneTimeOut: 120
     SpawnTimeout: 10
     EnableNetworkLogs: 1
-    NetworkTopology: 1
+    NetworkTopology: 0
     UseCMBService: 0
-    AutoSpawnPlayerPrefabClientSide: 1
+    AutoSpawnPlayerPrefabClientSide: 0
     NetworkMessageMetrics: 1
     NetworkProfilingMetrics: 1
     OldPrefabList: []

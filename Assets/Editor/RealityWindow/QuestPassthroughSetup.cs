@@ -19,6 +19,7 @@ namespace XRMultiplayer.EditorTools
             "com.unity.openxr.feature.compositionlayers",
             "com.unity.openxr.feature.arfoundation-meta-session",
             "com.unity.openxr.feature.arfoundation-meta-camera",
+            "com.unity.openxr.feature.meta-display-utilities",
             "com.unity.openxr.feature.input.oculustouch",
             "com.unity.openxr.feature.input.metaquestplus",
             "com.unity.openxr.feature.input.metaquestpro",
@@ -35,7 +36,6 @@ namespace XRMultiplayer.EditorTools
             "com.unity.openxr.feature.arfoundation-meta-raycast",
             "com.unity.openxr.feature.meta-boundary-visibility",
             "com.unity.openxr.feature.meta-colocation-discovery",
-            "com.unity.openxr.feature.meta-display-utilities",
         };
 
         [MenuItem("XR Multiplayer Meeting/Configure Quest Passthrough")]

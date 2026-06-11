@@ -111,10 +111,16 @@ namespace XRMultiplayer
                 return;
             }
 
+            NetworkManager.Singleton.NetworkConfig.NetworkTopology = NetworkTopologyTypes.ClientServer;
+            NetworkManager.Singleton.NetworkConfig.UseCMBService = false;
+            NetworkManager.Singleton.NetworkConfig.AutoSpawnPlayerPrefabClientSide = false;
+
             // Create a new UnityTransport, copy the connection data from the DA transport, set the server listen address to allow remote connections.
             m_LocalTransport = NetworkManager.Singleton.gameObject.AddComponent<UnityTransport>();
-            m_LocalTransport.ConnectionData = m_DATransport.ConnectionData;
-            m_LocalTransport.ConnectionData.ServerListenAddress = "0.0.0.0";
+            m_LocalTransport.SetConnectionData(
+                m_DATransport.ConnectionData.Address,
+                m_DATransport.ConnectionData.Port,
+                "0.0.0.0");
             NetworkManager.Singleton.NetworkConfig.NetworkTransport = m_LocalTransport;
 
             Destroy(m_DATransport); // Destroy the Distributed Authority transport as it is no longer needed

@@ -215,9 +215,9 @@ namespace XRMultiplayer
 
             if (enabled)
             {
-                m_MainCamera.clearFlags = m_OriginalClearFlags;
-                var color = m_OriginalBackgroundColor;
-                color.a = 1f;
+                m_MainCamera.clearFlags = CameraClearFlags.SolidColor;
+                var color = m_MainCamera.backgroundColor;
+                color.a = 0f;
                 m_MainCamera.backgroundColor = color;
             }
             else

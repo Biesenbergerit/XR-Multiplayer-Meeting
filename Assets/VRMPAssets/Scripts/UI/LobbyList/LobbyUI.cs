@@ -7,6 +7,8 @@ using Unity.Services.Multiplayer;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using System;
+using System.Net;
+using System.Net.Sockets;
 
 namespace XRMultiplayer
 {
@@ -82,6 +84,7 @@ namespace XRMultiplayer
         Coroutine m_DirectJoinTimeoutRoutine;
 
         bool m_Private = false;
+        bool m_HasValidManualLocalAddress;
         int m_PlayerCount;
 
         private void Awake()
@@ -347,6 +350,7 @@ namespace XRMultiplayer
 
         public void HostLocalRoom()
         {
+            m_HasValidManualLocalAddress = false;
             StartLocalConnectionRoutine(HostLocalRoomRoutine());
         }
 
@@ -359,7 +363,7 @@ namespace XRMultiplayer
 
             if (XRINetworkGameManager.Instance.HostLocalConnection())
             {
-                LocalConnectionSucceeded("Local room is ready.");
+                LocalConnectionSucceeded($"Local room is ready: {XRINetworkGameManager.ConnectedRoomCode}");
             }
             else
             {
@@ -462,6 +466,9 @@ namespace XRMultiplayer
             if (NetworkManager.Singleton.IsHost)
                 return false;
 
+            if (!m_HasValidManualLocalAddress)
+                return true;
+
             if (NetworkManager.Singleton.NetworkConfig.NetworkTransport is not UnityTransport transport)
                 return true;
 
@@ -509,23 +516,48 @@ namespace XRMultiplayer
         /// <param name="address">IP address or DNS</param>
         public virtual async void SetIPAsync(string address)
         {
-            // Validate the IP address format
-            var hostEntry = await System.Net.Dns.GetHostEntryAsync(address);
-            if (hostEntry == null || hostEntry.AddressList.Length == 0)
+            if (string.IsNullOrWhiteSpace(address) ||
+                address.IndexOf("Enter IP", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                address.Contains("<"))
             {
-                Utils.LogError($"Failed to resolve IP address: {address}");
-                m_ConnectionFailedText.text = $"<b>Error:</b> Invalid IP address";
-                ToggleConnectionSubPanel(ConnectionSubPanel.ConnectionFailurePanel);
+                m_HasValidManualLocalAddress = false;
                 return;
             }
 
-            // If multiple addresses are found, log a warning as we only use the first one
-            if (hostEntry.AddressList.Length > 1)
-                Utils.LogWarning($"Multiple IP addresses found for {address}. Using the first one: {hostEntry.AddressList[0]}");
+            address = address.Trim();
 
-            var ipAddress = hostEntry.AddressList[0].ToString();
-            var transport = (UnityTransport)NetworkManager.Singleton.NetworkConfig.NetworkTransport;
-            transport.SetConnectionData(ipAddress, transport.ConnectionData.Port); // Assuming default port is 7777, change as needed
+            try
+            {
+                IPAddress ipAddress;
+                if (!IPAddress.TryParse(address, out ipAddress))
+                {
+                    var hostEntry = await Dns.GetHostEntryAsync(address);
+                    ipAddress = Array.Find(hostEntry.AddressList, candidate => candidate.AddressFamily == AddressFamily.InterNetwork);
+                }
+
+                if (ipAddress == null || ipAddress.AddressFamily != AddressFamily.InterNetwork)
+                {
+                    Utils.LogWarning($"Failed to resolve IPv4 address: {address}");
+                    m_HasValidManualLocalAddress = false;
+                    return;
+                }
+
+                if (NetworkManager.Singleton == null ||
+                    NetworkManager.Singleton.NetworkConfig.NetworkTransport is not UnityTransport transport)
+                {
+                    m_HasValidManualLocalAddress = false;
+                    return;
+                }
+
+                transport.SetConnectionData(ipAddress.ToString(), transport.ConnectionData.Port);
+                m_HasValidManualLocalAddress = true;
+                ConnectedUpdated($"Local address set: {ipAddress}");
+            }
+            catch (Exception exception)
+            {
+                Utils.LogWarning($"Failed to resolve IP address '{address}': {exception.Message}");
+                m_HasValidManualLocalAddress = false;
+            }
         }
 
         /// <summary>
